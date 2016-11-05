@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Easy.Compression</id>
+    <version>$version$</version>
+    <title>Easy Compression</title>
+    <authors>Nima Ara</authors>
+    <owners>Nima Ara</owners>
+    <projectUrl>https://github.com/NimaAra/Easy.Compression</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A super fast and efficient compression library.</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2016</copyright>
+    <tags>Easy Compression LZ4 LZ4HC GZip Deflate Zip</tags>
+  </metadata>
+</package>
