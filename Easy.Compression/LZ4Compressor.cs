@@ -129,6 +129,7 @@
         /// </summary>
         public void Dispose()
         {
+            _copyBuffer.Dispose();
             _streamIn.Dispose();
             _streamOut.Dispose();
             _compressorStandard.Dispose();
