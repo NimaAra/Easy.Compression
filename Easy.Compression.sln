@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Easy.Compression", "Easy.Co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Easy.Compression.Tests.Unit", "Easy.Compression.Tests.Unit\Easy.Compression.Tests.Unit.csproj", "{7E79D042-2FC7-410D-A7F3-93518A81C356}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Easy.Compression.Benchmark", "Easy.Compression.Benchmark\Easy.Compression.Benchmark.csproj", "{5AB1BA27-A0D5-44DB-87E7-FA69BD20A358}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{7E79D042-2FC7-410D-A7F3-93518A81C356}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7E79D042-2FC7-410D-A7F3-93518A81C356}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7E79D042-2FC7-410D-A7F3-93518A81C356}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5AB1BA27-A0D5-44DB-87E7-FA69BD20A358}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5AB1BA27-A0D5-44DB-87E7-FA69BD20A358}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5AB1BA27-A0D5-44DB-87E7-FA69BD20A358}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5AB1BA27-A0D5-44DB-87E7-FA69BD20A358}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -16,13 +16,13 @@
         {
             using (var compressor = new LZ4Compressor())
             {
-                var compressedBytesStd = compressor.Encode(_inputBytes);
-                var compressedBytesAggr = compressor.Encode(_inputBytes, CompressionLevel.Aggressive);
+                var compressedBytesStd = compressor.Wrap(_inputBytes);
+                var compressedBytesAggr = compressor.Wrap(_inputBytes, CompressionLevel.Aggressive);
 
                 compressedBytesStd.ShouldBe(compressedBytesAggr);
 
-                compressor.DeCode(compressedBytesStd).ShouldBe(_inputBytes);
-                compressor.DeCode(compressedBytesAggr).ShouldBe(_inputBytes);
+                compressor.UnWrap(compressedBytesStd).ShouldBe(_inputBytes);
+                compressor.UnWrap(compressedBytesAggr).ShouldBe(_inputBytes);
             }
         }
 
@@ -31,16 +31,16 @@
         {
             using (var compressor = new LZ4Compressor())
             {
-                var compressedBytesStd = compressor.Encode(InputStr);
-                var compressedBytesAggr = compressor.Encode(InputStr, CompressionLevel.Aggressive);
+                var compressedBytesStd = compressor.Wrap(InputStr);
+                var compressedBytesAggr = compressor.Wrap(InputStr, CompressionLevel.Aggressive);
 
                 compressedBytesStd.ShouldBe(compressedBytesAggr);
 
-                compressor.DeCodeAsString(compressedBytesStd).ShouldBe(InputStr);
-                compressor.DeCodeAsString(compressedBytesAggr).ShouldBe(InputStr);
+                compressor.UnWrapAsString(compressedBytesStd).ShouldBe(InputStr);
+                compressor.UnWrapAsString(compressedBytesAggr).ShouldBe(InputStr);
 
-                compressor.DeCode(compressedBytesStd).ShouldBe(_inputBytes);
-                compressor.DeCode(compressedBytesAggr).ShouldBe(_inputBytes);
+                compressor.UnWrap(compressedBytesStd).ShouldBe(_inputBytes);
+                compressor.UnWrap(compressedBytesAggr).ShouldBe(_inputBytes);
             }
         }
 
@@ -51,16 +51,16 @@
             {
                 var inputBytes = Encoding.UTF32.GetBytes(InputStr);
 
-                var compressedBytesStd = compressor.Encode(inputBytes);
-                var compressedBytesAggr = compressor.Encode(inputBytes, CompressionLevel.Aggressive);
+                var compressedBytesStd = compressor.Wrap(inputBytes);
+                var compressedBytesAggr = compressor.Wrap(inputBytes, CompressionLevel.Aggressive);
 
                 compressedBytesStd.ShouldNotBe(compressedBytesAggr);
 
-                compressor.DeCodeAsString(compressedBytesStd, Encoding.UTF32).ShouldBe(InputStr);
-                compressor.DeCodeAsString(compressedBytesAggr, Encoding.UTF32).ShouldBe(InputStr);
+                compressor.UnWrapAsString(compressedBytesStd, Encoding.UTF32).ShouldBe(InputStr);
+                compressor.UnWrapAsString(compressedBytesAggr, Encoding.UTF32).ShouldBe(InputStr);
 
-                compressor.DeCode(compressedBytesStd).ShouldBe(inputBytes);
-                compressor.DeCode(compressedBytesAggr).ShouldBe(inputBytes);
+                compressor.UnWrap(compressedBytesStd).ShouldBe(inputBytes);
+                compressor.UnWrap(compressedBytesAggr).ShouldBe(inputBytes);
             }
         }
     }

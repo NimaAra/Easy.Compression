@@ -20,7 +20,7 @@
                 var compressedBytesStd = compressor.Compress(_inputBytes);
                 var compressedBytesAggr = compressor.Compress(_inputBytes, CompressionLevel.Aggressive);
 
-                compressedBytesStd.ShouldNotBe(compressedBytesAggr);
+                compressedBytesStd.ShouldBe(compressedBytesAggr);
 
                 compressor.DeCompress(compressedBytesStd).ShouldBe(_inputBytes);
                 compressor.DeCompress(compressedBytesAggr).ShouldBe(_inputBytes);
@@ -40,7 +40,7 @@
                 compressor.Compress(streamIn, compressedStream);
                 
                 var compressedBytes = compressedStream.ToArray();
-                compressedBytes.Length.ShouldBe(85);
+                compressedBytes.Length.ShouldBe(84);
 
                 compressedStream.Position = 0;
                 using (var deCompressedStream = new MemoryStream())
@@ -68,7 +68,7 @@
                 compressor.Compress(streamIn, compressedStream, CompressionLevel.Aggressive);
 
                 var compressedBytes = compressedStream.ToArray();
-                compressedBytes.Length.ShouldBe(85);
+                compressedBytes.Length.ShouldBe(84);
 
                 compressedStream.Position = 0;
                 using (var deCompressedStream = new MemoryStream())
@@ -91,7 +91,7 @@
                 var compressedBytesStd = compressor.Compress(InputStr);
                 var compressedBytesAggr = compressor.Compress(InputStr, CompressionLevel.Aggressive);
 
-                compressedBytesStd.ShouldNotBe(compressedBytesAggr);
+                compressedBytesStd.ShouldBe(compressedBytesAggr);
 
                 compressor.DeCompressAsString(compressedBytesStd).ShouldBe(InputStr);
                 compressor.DeCompressAsString(compressedBytesAggr).ShouldBe(InputStr);

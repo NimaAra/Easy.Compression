@@ -14,27 +14,19 @@
     /// </summary>
     public sealed class LZ4Compressor : ICompressor
     {
-        private readonly ThreadLocal<byte[]> _copyBuffer;
+        private const int BufferSize = 1048576;
+        private readonly ThreadLocal<byte[]> _readBuffer, _writeBuffer;
         private readonly ThreadLocalDisposable<MemoryStream> _streamIn, _streamOut;
-        private readonly ThreadLocalDisposable<LZ4Stream> _compressorStandard, _compressorAggressive, _deCompressor;
 
         /// <summary>
         /// Create an instance of the <see cref="LZ4Compressor"/>.
         /// </summary>
         public LZ4Compressor()
         {
-            _copyBuffer = new ThreadLocal<byte[]>(() => new byte[4096]);
+            _readBuffer = new ThreadLocal<byte[]>(() => new byte[BufferSize]);
+            _writeBuffer = new ThreadLocal<byte[]>(() => new byte[BufferSize]);
             _streamIn = new ThreadLocalDisposable<MemoryStream>(() => new MemoryStream());
             _streamOut = new ThreadLocalDisposable<MemoryStream>(() => new MemoryStream());
-
-            _compressorStandard = new ThreadLocalDisposable<LZ4Stream>(
-                () => new LZ4Stream(_streamOut.Value, LZ4StreamMode.Compress, LZ4StreamFlags.InteractiveRead | LZ4StreamFlags.IsolateInnerStream));
-
-            _compressorAggressive = new ThreadLocalDisposable<LZ4Stream>(
-                () => new LZ4Stream(_streamOut.Value, LZ4StreamMode.Compress, LZ4StreamFlags.HighCompression | LZ4StreamFlags.InteractiveRead | LZ4StreamFlags.IsolateInnerStream));
-
-            _deCompressor = new ThreadLocalDisposable<LZ4Stream>(
-                () => new LZ4Stream(_streamIn.Value, LZ4StreamMode.Decompress, LZ4StreamFlags.InteractiveRead | LZ4StreamFlags.IsolateInnerStream));
         }
 
         /// <summary>
@@ -42,14 +34,14 @@
         /// </summary>
         public void Compress(Stream streamIn, Stream compressedOutput, CompressionLevel level = CompressionLevel.Standard)
         {
-            var buffer = _copyBuffer.Value;
-            var flags = LZ4StreamFlags.InteractiveRead | LZ4StreamFlags.IsolateInnerStream;
-            if (level == CompressionLevel.Aggressive) { flags = flags | LZ4StreamFlags.HighCompression; }
-
-            using (var compressor = new LZ4Stream(compressedOutput, LZ4StreamMode.Compress, flags))
+            if (level == CompressionLevel.Standard)
             {
-                CopyTo(streamIn, buffer, compressor);
+                EncodeStandard(streamIn, compressedOutput); 
+            } else
+            {
+                EncodeAggresive(streamIn, compressedOutput);
             }
+            compressedOutput.Flush();
         }
 
         /// <summary>
@@ -58,15 +50,11 @@
         /// <returns>The compressed bytes.</returns>
         public byte[] Compress(byte[] bytes, CompressionLevel level = CompressionLevel.Standard)
         {
-            var buffer = _copyBuffer.Value;
-            var source = _streamIn.Value;
-            var destination = _streamOut.Value;
-            var compressor = level == CompressionLevel.Standard ? _compressorStandard.Value : _compressorAggressive.Value;
-
-            WriteAndReset(source, bytes, destination);
-            CopyTo(source, buffer, compressor);
-            compressor.Flush();
-            return destination.ToArray();
+            if (level == CompressionLevel.Standard)
+            {
+                return LZ4Codec.Encode(bytes, 0, bytes.Length);
+            }
+            return LZ4Codec.EncodeHC(bytes, 0, bytes.Length);
         }
 
         /// <summary>
@@ -83,11 +71,7 @@
         /// </summary>
         public void DeCompress(Stream compressedInput, Stream streamOut)
         {
-            var buffer = _copyBuffer.Value;
-            using (var deCompressor = new LZ4Stream(compressedInput, LZ4StreamMode.Decompress, LZ4StreamFlags.InteractiveRead | LZ4StreamFlags.IsolateInnerStream))
-            {
-                CopyTo(deCompressor, buffer, streamOut);
-            }
+            Decode(compressedInput, streamOut);
         }
 
         /// <summary>
@@ -96,14 +80,7 @@
         /// <returns>The decompressed bytes.</returns>
         public byte[] DeCompress(byte[] bytes)
         {
-            var buffer = _copyBuffer.Value;
-            var source = _streamIn.Value;
-            var destination = _streamOut.Value;
-            var deCompressor = _deCompressor.Value;
-
-            WriteAndReset(source, bytes, destination);
-            CopyTo(deCompressor, buffer, destination);
-            return destination.ToArray();
+            return Decode(bytes);
         }
 
         /// <summary>
@@ -121,7 +98,7 @@
         /// <returns>The decompressed string.</returns>
         public string DeCompressAsString(byte[] bytes, Encoding encoding)
         {
-            return encoding.GetString(DeCompress(bytes));
+            return encoding.GetString(Decode(bytes));
         }
 
         /// <summary>
@@ -129,26 +106,24 @@
         /// </summary>
         public void Dispose()
         {
-            _copyBuffer.Dispose();
+            _readBuffer.Dispose();
+            _writeBuffer.Dispose();
             _streamIn.Dispose();
             _streamOut.Dispose();
-            _compressorStandard.Dispose();
-            _compressorAggressive.Dispose();
-            _deCompressor.Dispose();
         }
 
     #region Internals
-        internal byte[] Encode(string input, CompressionLevel level = CompressionLevel.Standard)
+        internal byte[] Wrap(string input, CompressionLevel level = CompressionLevel.Standard)
         {
-            return Encode(input, Encoding.UTF8, level);
+            return Wrap(input, Encoding.UTF8, level);
         }
 
-        internal byte[] Encode(string input, Encoding encoding, CompressionLevel level = CompressionLevel.Standard)
+        internal byte[] Wrap(string input, Encoding encoding, CompressionLevel level = CompressionLevel.Standard)
         {
-            return Encode(encoding.GetBytes(input), level);
+            return Wrap(encoding.GetBytes(input), level);
         }
 
-        internal byte[] Encode(byte[] bytes, CompressionLevel level = CompressionLevel.Standard)
+        internal byte[] Wrap(byte[] bytes, CompressionLevel level = CompressionLevel.Standard)
         {
             switch (level)
             {
@@ -161,39 +136,73 @@
             }
         }
 
-        internal byte[] DeCode(byte[] bytes)
+        internal byte[] UnWrap(byte[] bytes)
         {
             return LZ4Codec.Unwrap(bytes);
         }
 
-        internal string DeCodeAsString(byte[] bytes)
+        internal string UnWrapAsString(byte[] bytes)
         {
-            return DeCodeAsString(bytes, Encoding.UTF8);
+            return UnWrapAsString(bytes, Encoding.UTF8);
         }
 
-        internal string DeCodeAsString(byte[] bytes, Encoding encoding)
+        internal string UnWrapAsString(byte[] bytes, Encoding encoding)
         {
-            return encoding.GetString(DeCode(bytes));
+            return encoding.GetString(UnWrap(bytes));
         }
-    #endregion
+        #endregion
 
-        private static void WriteAndReset(Stream source, byte[] bytes, Stream destination)
+        private void EncodeStandard(Stream streamIn, Stream streamOut)
         {
-            source.SetLength(0);
-            source.Write(bytes, 0, bytes.Length);
-            source.Position = 0;
-            destination.SetLength(0);
-        }
+            var readBuffer = _readBuffer.Value;
+            var writeBuffer = _writeBuffer.Value;
 
-        private static void CopyTo(Stream source, byte[] buffer, Stream destination)
-        {
-            Array.Clear(buffer, 0, buffer.Length);
-
-            int count;
-            while ((count = source.Read(buffer, 0, buffer.Length)) != 0)
+            int bytesRead;
+            while ((bytesRead = streamIn.Read(readBuffer, 0, readBuffer.Length)) != 0)
             {
-                destination.Write(buffer, 0, count);
+                var bytesCompressed = LZ4Codec.Encode(readBuffer, 0, bytesRead, writeBuffer, 0, writeBuffer.Length);
+                streamOut.Write(writeBuffer, 0, bytesCompressed);
+                Array.Clear(readBuffer, 0, readBuffer.Length);
+                Array.Clear(writeBuffer, 0, writeBuffer.Length);
             }
+        }
+
+        private void EncodeAggresive(Stream streamIn, Stream streamOut)
+        {
+            var readBuffer = _readBuffer.Value;
+            var writeBuffer = _writeBuffer.Value;
+
+            int bytesRead;
+            while ((bytesRead = streamIn.Read(readBuffer, 0, readBuffer.Length)) != 0)
+            {
+                var bytesCompressed = LZ4Codec.EncodeHC(readBuffer, 0, bytesRead, writeBuffer, 0, writeBuffer.Length);
+                streamOut.Write(writeBuffer, 0, bytesCompressed);
+                Array.Clear(readBuffer, 0, readBuffer.Length);
+                Array.Clear(writeBuffer, 0, writeBuffer.Length);
+            }
+        }
+
+        private void Decode(Stream streamIn, Stream streamOut)
+        {
+            var readBuffer = _readBuffer.Value;
+            var writeBuffer = _writeBuffer.Value;
+
+            int bytesRead;
+            while ((bytesRead = streamIn.Read(readBuffer, 0, readBuffer.Length)) != 0)
+            {
+                var bytesCompressed = LZ4Codec.Decode(readBuffer, 0, bytesRead, writeBuffer, 0, writeBuffer.Length);
+                streamOut.Write(writeBuffer, 0, bytesCompressed);
+                Array.Clear(readBuffer, 0, readBuffer.Length);
+                Array.Clear(writeBuffer, 0, writeBuffer.Length);
+            }
+        }
+
+        private byte[] Decode(byte[] compressedBytes)
+        {
+            var writeBuffer = _writeBuffer.Value;
+            var bytesCompressed = LZ4Codec.Decode(compressedBytes, 0, compressedBytes.Length, writeBuffer, 0, writeBuffer.Length);
+
+            return writeBuffer.SubArray(0, bytesCompressed);
         }
     }
 }
