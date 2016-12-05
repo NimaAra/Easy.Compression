@@ -4,4 +4,6 @@
 A super fast and efficient compression library.
 ___
 
+## Details Coming soon...
+
 * NuGet at: https://www.nuget.org/packages/Easy.Compression/
